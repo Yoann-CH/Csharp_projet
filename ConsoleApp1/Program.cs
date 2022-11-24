@@ -8,7 +8,7 @@ namespace projet
         private int numero;
         private static int nombreDeCompte = 1;
         private Personne titulaireCompte;
-        private List<OperationBancaire> operationBancaires;
+        private List<OperationBancaire>? operationBancaires;
 
 
         public Compte(Personne titulaireCompte)
@@ -61,25 +61,52 @@ namespace projet
         private double solde;
         private double decouvertMaximalAutorise;
         private double debitMaximalAutorise;
+        private bool decouvert;
+        private double debitAutorise;
 
         public Courant(Personne titulaireCompte, double solde, double decouvertMaximalAutorise, double debitMaximalAutorise) : base(titulaireCompte)
         {
             if(solde < decouvertMaximalAutorise)
             {
-                Console.WriteLine("Le solde ne peut pas être au dessus du découvert maximal autorisé !");
+                Console.WriteLine("Le solde ne peut pas être en dessous du découvert maximal autorisé !");
                 this.solde = 0;
             }
             else
             {
+                if(solde < 0)
+                {
+                    decouvert = true;
+                }
+                else
+                {
+                    decouvert = false;
+                }
                 this.solde = solde;
             }
             this.decouvertMaximalAutorise = decouvertMaximalAutorise;
             this.debitMaximalAutorise = debitMaximalAutorise;
+            if(debitMaximalAutorise <= solde)
+            {
+                debitAutorise = debitMaximalAutorise;
+            }
+            else
+            {
+                debitAutorise = debitAutorise - Math.Abs(solde);
+            }
         }
 
         public override void Crediter(double credit)
         {
+
             solde += credit;
+            if (solde < 0)
+            {
+                decouvert = true;
+            }
+            else
+            {
+                decouvert = false;
+            }
             OperationBancaire o = new OperationBancaire(credit, "compte crédité");
             OperationBancaires.Add(o);
         }
@@ -97,6 +124,14 @@ namespace projet
             else
             {
                 solde -= debit;
+                if (solde < 0)
+                {
+                    decouvert = true;
+                }
+                else
+                {
+                    decouvert = false;
+                }
                 OperationBancaire o = new OperationBancaire(debit, "compte débité");
                 OperationBancaires.Add(o);
             }
@@ -160,6 +195,10 @@ namespace projet
             this.adresse = adresse;
         }
 
+        public string Nom
+        {
+            get { return nom; }
+        }
 
     }
 
