@@ -8,7 +8,7 @@ namespace projet
         protected int numero;
         protected static int nombreDeCompte = 1;
         protected Personne titulaireCompte;
-        protected List<OperationBancaire> operationBancaires;
+        protected List<OperationBancaire> operationBancaires = new List<OperationBancaire>();
 
 
         public Compte(Personne titulaireCompte)
@@ -133,7 +133,7 @@ namespace projet
         public override string toString()
         {
             string text = "";
-            text += "nom du client : " + titulaireCompte.Nom + " numero carte d'identité : " + titulaireCompte.NumeroCarteIdentite + " adresse du client " + titulaireCompte.Adresse + "\n"+"numero de compte : " + numero + "solde du compte : " + solde + " découvert maximal autorisé : " + decouvertMaximalAutorise + " débit maximal autorisé : " + debitMaximalAutorise + "\n";
+            text += "nom du client : " + titulaireCompte.Nom + " | numero carte d'identité : " + titulaireCompte.NumeroCarteIdentite + " | adresse du client : " + titulaireCompte.Adresse + "\n"+"numero de compte : " + numero + " | solde du compte : " + solde + " | découvert maximal autorisé : " + decouvertMaximalAutorise + " | débit maximal autorisé : " + debitMaximalAutorise + "\n";
             if (decouvert)
             {
                 text += "Le compte est à découvert.\n";
@@ -286,8 +286,8 @@ namespace projet
     class Banque
     {
         private string nom;
-        private List<Compte> comptes;
-        private List<Personne> clients;
+        private List<Compte> comptes = new List<Compte>();
+        private List<Personne> clients = new List<Personne>();
 
         public Banque(string nom)
         {
@@ -321,9 +321,12 @@ namespace projet
                 while (!int.TryParse(Console.ReadLine(), out result)) ;
                 return result;
             }
+            Console.WriteLine("Numéro carte d'identité : ");
             int numeroCarteIdentiteClient = SaisieNombre();
             Personne client = new Personne(nomClient, numeroCarteIdentiteClient, adresseClient);
             clients.Add(client);
+            Console.WriteLine("Client créé.");
+            return;
         }
 
         public void SupprimerClient()
@@ -373,6 +376,7 @@ namespace projet
                         Personne p = client;
                         verifTitulaire = true;
                         Epargne e = new Epargne(p, soldeCompte, interet);
+                        Console.WriteLine("Compte créé.");
                         comptes.Add(e);
                     }
                 }
@@ -394,6 +398,11 @@ namespace projet
                 double soldeCompte = SaisieNombreDouble();
                 Console.WriteLine("découvert max du compte : ");
                 double decouvertMaximalAutorise = SaisieNombreDouble();
+                if(decouvertMaximalAutorise > 0)
+                {
+                    Console.WriteLine("Le découvert maximal autorisé ne peut pas être négatif !");
+                    return;
+                }
                 Console.WriteLine("débit maximal du compte : ");
                 double debitMaximalAutorise = SaisieNombreDouble();
                 Console.WriteLine("nom du titulaire : ");
@@ -406,6 +415,7 @@ namespace projet
                         Personne p = client;
                         verifTitulaire = true;
                         Courant c = new Courant(p, soldeCompte, decouvertMaximalAutorise, debitMaximalAutorise);
+                        Console.WriteLine("Compte créé.");
                         comptes.Add(c);
                     }
                 }
@@ -462,10 +472,10 @@ namespace projet
                     c1 = compte;
                     verifC1 = true;
                 }
-                else if(compte.Numero == numeroCompteDebiter)
+                if(compte.Numero == numeroCompteDebiter)
                 {
                     c2 = compte;
-                    verifC1 = true;
+                    verifC2 = true;
                 }
             }
             if(!verifC1)
@@ -489,7 +499,7 @@ namespace projet
                 while (!double.TryParse(Console.ReadLine(), out resultDouble)) ;
                 return resultDouble;
             }
-
+            Console.WriteLine("Montant du virement : ");
             double virement = SaisieNombreDouble();
             c1.Crediter(virement);
             c2.Debiter(virement);
@@ -497,6 +507,7 @@ namespace projet
             c1.OperationBancaires.Add(o1);
             OperationBancaire o2 = new OperationBancaire(virement, "virement sur le compte numéro " + c1.Numero);
             c2.OperationBancaires.Add(o2);
+            Console.WriteLine("Virement effectué.");
         }
 
 
@@ -549,11 +560,12 @@ namespace projet
                                 verifClient = true;
                                 do
                                 {
+                                    Console.Clear();
                                     Console.WriteLine("Bienvenue " + client.Nom);
-                                    Console.WriteLine("Menu client`:\n" +
-                                                      "action 1: voir les infos de mes comptes" +
-                                                      "action 2: créditer un de mes comptes" +
-                                                      "action 3: débiter un de mes comptes");
+                                    Console.WriteLine("Menu client :\n" +
+                                                      "action 1: voir les infos de mes comptes\n" +
+                                                      "action 2: créditer un de mes comptes\n" +
+                                                      "action 3: débiter un de mes comptes\n");
                                     int action = SaisieNombre();
                                     switch (action)
                                     {
@@ -568,7 +580,7 @@ namespace projet
                                             {
                                                 if (compte.TitulaireCompte.Nom.ToLower() == client.Nom.ToLower())
                                                 {
-                                                    Console.WriteLine(compte.ToString());
+                                                    Console.WriteLine(compte.toString());
                                                     verifCompte = true;
                                                 }
                                             }
@@ -657,11 +669,44 @@ namespace projet
                         }
                         break;
                     case 1:
+                        do
+                        {
+                            Console.Clear();
+                            Console.WriteLine("Bienvenue ");
+                            Console.WriteLine("Menu banquier :\n" +
+                                              "action 1: créer un client\n" +
+                                              "action 2: supprimer un client\n" +
+                                              "action 3: créer un compte\n" +
+                                              "action 4: supprimer un compte\n" +
+                                              "action 5: virement entre compte\n" +
+                                              "action 6: récuperer les informations d'un compte\n");
+                            int action = SaisieNombre();
+                            switch (action)
+                            {
+                                case 1:
+                                    banque.CreerClient();
+                                    break;
+                                case 2:
+                                    banque.SupprimerClient();
+                                    break;
+                                case 3:
+                                    banque.ajouterCompte();
+                                    break;
+                                case 4:
+                                    banque.SupprimerCompte();
+                                    break;
+                                case 5:
+                                    banque.Virement();
+                                    break;
+                            }
+                            Console.WriteLine("Tapez Baskspace pour sortir du menu banquier ou tapez sur une autre touche pour continuer sur ce menu");
+                            cki = Console.ReadKey();
+                        } while (cki.Key != ConsoleKey.Backspace);
                         break;
                 }
-                Console.WriteLine("Tapez Escape pour sortir de la banque");
+                Console.WriteLine("Tapez Baskspace pour sortir du menu banquier ou tapez sur une autre touche pour continuer à naviguer dans la banque");
                 cki = Console.ReadKey();
-            } while (cki.Key != ConsoleKey.Spacebar);
+            } while (cki.Key != ConsoleKey.Backspace);
         }
     }
 }
