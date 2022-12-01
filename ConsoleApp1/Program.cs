@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Security.Cryptography.X509Certificates;
 
 namespace projet
 {
@@ -36,9 +37,12 @@ namespace projet
 
         public abstract void Crediter(double credit);
 
-        public abstract void Debiter(double debit);
+        public abstract bool Debiter(double debit);
 
         public abstract string toString();
+
+        public abstract void PrevisionSoldeInteret();
+
 
     }
 
@@ -104,15 +108,17 @@ namespace projet
             OperationBancaires.Add(o);
         }
 
-        public override void Debiter(double debit)
+        public override bool Debiter(double debit)
         {
             if(debit > debitMaximalAutorise)
             {
                 Console.WriteLine("Le montant débité ne peut pas être superieur au débit maximal autorisé !");
+                return false;
             }
             else  if(solde - debit < decouvertMaximalAutorise)
             {
                 Console.WriteLine("Le solde ne peut pas être inférieur au découvert maximal autorisé !");
+                return false;
             }
             else
             {
@@ -127,7 +133,9 @@ namespace projet
                 }
                 OperationBancaire o = new OperationBancaire(debit, "compte débité");
                 OperationBancaires.Add(o);
+                return true;
             }
+
         }
 
         public override string toString()
@@ -157,6 +165,11 @@ namespace projet
             }
             return text;
         }
+
+        public override void PrevisionSoldeInteret()
+        {
+            Console.WriteLine("Le compte n'est pas un compte d'épargne, vous n'avez pas d'intérêt !");
+        }
     }
 
     class Epargne : Compte
@@ -185,24 +198,26 @@ namespace projet
             OperationBancaires.Add(o);
         }
 
-        public override void Debiter(double debit)
+        public override bool Debiter(double debit)
         { 
             if (solde - debit < 0)
             {
                 Console.WriteLine("Le solde ne peut pas être inférieur à 0 !");
+                return false;
             }
             else
             {
                 solde -= debit;
                 OperationBancaire o = new OperationBancaire(debit, "compte débité");
                 OperationBancaires.Add(o);
+                return true;
             }
         }
 
         public override string toString()
         {
             string text = "";
-            text +=  "nom du client : " + titulaireCompte.Nom + " numero carte d'identité : " + titulaireCompte.NumeroCarteIdentite + " adresse du client " + titulaireCompte.Adresse + "\n" + "numero de compte : "+ numero +"solde du compte : " + solde + " intéret : " + interet + "\n";
+            text +=  "nom du client : " + titulaireCompte.Nom + " numero carte d'identité : " + titulaireCompte.NumeroCarteIdentite + " adresse du client " + titulaireCompte.Adresse + "\n" + "numero de compte : "+ numero +" solde du compte : " + solde + " intéret : " + interet + "\n";
             int cinqDerniereOperation = 0;
             foreach (OperationBancaire o in operationBancaires)
             {
@@ -217,6 +232,26 @@ namespace projet
                 }
             }
             return text;
+        }
+
+        public override void PrevisionSoldeInteret()
+        {
+            Console.WriteLine("Saisir l'année où vous souhaitez voir les prévisions de votre solde en fonction des intérêts:");
+            int result;
+
+            int SaisieNombre()
+            {
+                while (!int.TryParse(Console.ReadLine(), out result)) ;
+                return result;
+            }
+            int previsionAnnee = SaisieNombre();
+            int annee = previsionAnnee - DateTime.Now.Year;
+            double previsionSolde = solde;
+            for(int i = 0; i < annee; i++)
+            {
+                previsionSolde = previsionSolde * interet;
+            }
+            Console.WriteLine("Prévision :" + previsionSolde);
         }
     }
 
@@ -313,6 +348,17 @@ namespace projet
         {
             Console.WriteLine("Nom du client :");
             string nomClient = Console.ReadLine();
+            if (clients != null)
+            {
+                foreach(Personne personne in clients)
+                {
+                    if(personne.Nom.ToLower() == nomClient.ToLower())
+                    {
+                        Console.WriteLine("Le client existe déjà !Veuillez choisir un autre nom.");
+                        return;
+                    }
+                }
+            }
             Console.WriteLine("Adresse du client :");
             string adresseClient = Console.ReadLine();
             int result;
@@ -358,14 +404,15 @@ namespace projet
             {
                 Console.WriteLine("solde du compte : ");
                 double resultDouble;
-                 double SaisieNombreDouble()
+                double SaisieNombreDouble()
                 {
                     while (!double.TryParse(Console.ReadLine(), out resultDouble)) ;
                     return resultDouble;
                 }
                 double soldeCompte = SaisieNombreDouble();
-                Console.WriteLine("intéret du compte : ");
-                double interet = SaisieNombreDouble();
+                Console.WriteLine("intéret du compte : (nombre à virgule entre 1 et 2)");
+                double interet;
+                interet = SaisieNombreDouble();
                 Console.WriteLine("nom du titulaire : ");
                 string nomTitulaire = Console.ReadLine();
                 bool verifTitulaire = false;
@@ -396,7 +443,7 @@ namespace projet
                     return resultDouble;
                 }
                 double soldeCompte = SaisieNombreDouble();
-                Console.WriteLine("découvert max du compte : ");
+                Console.WriteLine("découvert max du compte : (valeur négative)");
                 double decouvertMaximalAutorise = SaisieNombreDouble();
                 if(decouvertMaximalAutorise > 0)
                 {
@@ -501,13 +548,55 @@ namespace projet
             }
             Console.WriteLine("Montant du virement : ");
             double virement = SaisieNombreDouble();
-            c1.Crediter(virement);
-            c2.Debiter(virement);
-            OperationBancaire o1 = new OperationBancaire(virement, "virement depuis le compte numéro " + c2.Numero);
-            c1.OperationBancaires.Add(o1);
-            OperationBancaire o2 = new OperationBancaire(virement, "virement sur le compte numéro " + c1.Numero);
-            c2.OperationBancaires.Add(o2);
-            Console.WriteLine("Virement effectué.");
+            bool verif = c2.Debiter(virement);
+            if (verif)
+            {
+                c1.Crediter(virement);
+                OperationBancaire o1 = new OperationBancaire(virement, "virement depuis le compte numéro " + c2.Numero);
+                c1.OperationBancaires.Add(o1);
+                OperationBancaire o2 = new OperationBancaire(virement, "virement sur le compte numéro " + c1.Numero);
+                c2.OperationBancaires.Add(o2);
+                Console.WriteLine("Virement effectué.");
+            }
+            else
+            {
+                Console.WriteLine("Le virement n'a pas pu s'effectuer");
+            }
+        }
+
+        public void RechercheCompte()
+        {
+            Console.WriteLine("Saisir un numéro de compte:");
+            int result;
+
+            int SaisieNombre()
+            {
+                while (!int.TryParse(Console.ReadLine(), out result)) ;
+                return result;
+            }
+            int numero = SaisieNombre();
+            foreach(Compte compte in comptes)
+            {
+                if(compte.Numero == numero)
+                {
+                    Console.WriteLine(compte.toString());
+                    return;
+                }
+            }
+            Console.WriteLine("Ce nurémo de compte n'est pas attribué à un compte !");
+        }
+
+        public void ToutLesComptes()
+        {
+            if(comptes.Count != 0)
+            {
+                foreach(Compte compte in comptes)
+                {
+                    Console.WriteLine(compte.toString());
+                }
+                return;
+            }
+            Console.WriteLine("Il n'y pas encore de compte créé !");
         }
 
 
@@ -565,7 +654,8 @@ namespace projet
                                     Console.WriteLine("Menu client :\n" +
                                                       "action 1: voir les infos de mes comptes\n" +
                                                       "action 2: créditer un de mes comptes\n" +
-                                                      "action 3: débiter un de mes comptes\n");
+                                                      "action 3: débiter un de mes comptes\n"+
+                                                      "action 4: Prévision de votre solde en fonction des intérêts pour compte épargne\n");
                                     int action = SaisieNombre();
                                     switch (action)
                                     {
@@ -657,10 +747,33 @@ namespace projet
                                                 Console.WriteLine("Le numéro saisi de correspond pas un numéro de compte dans la banque !");
                                             }
                                             break;
+                                        case 4:
+                                            Console.WriteLine("Saisir le numéro du compte : ");
+                                            numero = SaisieNombre();
+                                            verifNum = false;
+                                            if (banque.Comptes == null)
+                                            {
+                                                Console.WriteLine("La banque ne possède pas encore de compte actif ! Veuillez contacter un banquier pour créer un compte.");
+                                                break;
+                                            }
+                                            foreach (Compte compte in banque.Comptes)
+                                            {
+                                                if (compte.Numero == numero)
+                                                {
+                                                    compte.PrevisionSoldeInteret();
+                                                    verifNum = true;
+                                                }
+                                            }
+                                            if (!verifNum)
+                                            {
+                                                Console.WriteLine("Le numéro saisi de correspond pas un numéro de compte dans la banque");
+                                            }
+                                            break;
+
                                     }
-                                    Console.WriteLine("Tapez Escape pour sortir du menu client");
+                                    Console.WriteLine("Tapez Baskspace pour sortir du menu client");
                                     cki = Console.ReadKey();
-                                } while (cki.Key != ConsoleKey.Spacebar) ;
+                                } while (cki.Key != ConsoleKey.Backspace) ;
                             }
                         }
                         if (!verifClient)
@@ -679,7 +792,8 @@ namespace projet
                                               "action 3: créer un compte\n" +
                                               "action 4: supprimer un compte\n" +
                                               "action 5: virement entre compte\n" +
-                                              "action 6: récuperer les informations d'un compte\n");
+                                              "action 6: récuperer les informations d'un compte\n"+
+                                              "action 7: récuperer les informations de tout les comptes\n");
                             int action = SaisieNombre();
                             switch (action)
                             {
@@ -698,6 +812,13 @@ namespace projet
                                 case 5:
                                     banque.Virement();
                                     break;
+                                case 6:
+                                    banque.RechercheCompte();
+                                    break;
+                                case 7:
+                                    banque.ToutLesComptes();
+                                    break;
+
                             }
                             Console.WriteLine("Tapez Baskspace pour sortir du menu banquier ou tapez sur une autre touche pour continuer sur ce menu");
                             cki = Console.ReadKey();
